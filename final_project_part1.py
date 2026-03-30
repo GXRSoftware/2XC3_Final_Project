@@ -1,8 +1,8 @@
 import min_heap
 import random
 
-testAStar = True
-AStarEmpirical = True
+testAStar = False
+AStarEmpirical = False
 
 class DirectedWeightedGraph:
 
@@ -189,9 +189,9 @@ import matplotlib.pyplot as plt
 import time
 import random
 
-##########################
-# Correctness Tests      #
-##########################
+#####################
+# Correctness Tests #
+#####################
 
 def test_a_star_basic():
     """Simple 4-node graph with known shortest path"""
@@ -280,9 +280,9 @@ def test_a_star_matches_dijkstra_random():
     print("[Random Match Test x10] PASSED")
 
 
-##########################
-# Empirical Tests        #
-##########################
+###################
+# Empirical Tests #
+###################
 
 def empirical_dijkstra_vs_astar():
     runs = 50
@@ -378,6 +378,105 @@ if testAStar:
     test_a_star_matches_dijkstra_random()
 
 if AStarEmpirical:
-    print("\n=== Empirical Tests ===")
     empirical_dijkstra_vs_astar()
     empirical_heuristic_quality()
+
+##########
+# Week 3 #
+##########
+import pandas as pd
+import math as math
+
+class StarGraph(DirectedWeightedGraph):
+    def __init__(self):
+        self.adj = {}
+        self.weights = {}
+
+        # We additionally store the station data (for the heuristics)
+        # And the heuristic dictionary
+        self.stats = []
+        self.h = {}
+
+    def loadStations(self, file1, file2):
+        # First file should contain the id, x, and y (or in this case lat and lon)
+        # Second file should contain the valid edges
+        # Load the stations
+        self.stats = pd.read_csv(file1)
+        self.stats = self.stats.set_index('id')
+        self.stats = self.stats.to_dict(orient='index')
+
+        # Add each station as a node
+        for stat in self.stats:
+            self.add_node(stat)
+        
+        # Load the connections
+        edges = pd.read_csv(file2)
+        for edge in edges.itertuples():
+            # Take the node pairs
+            stat1 = edge.station1
+            stat2 = edge.station2
+
+            # Calculate the distance
+            dist = round(math.sqrt((self.stats[stat1]['longitude'] - self.stats[stat2]['longitude']) ** 2 + (self.stats[stat1]['latitude'] - self.stats[stat2]['latitude']) ** 2), 10)
+            
+            # We can go both ways, so add both edges
+            self.add_edge(stat1, stat2, dist)
+            self.add_edge(stat2, stat1, dist)
+
+    def createHeuristic(self, goal):
+        # Take the goal latitude and longitude
+        # Set the heuristic to the goal to 0
+        goalLat = self.stats[goal]['latitude']
+        goalLon = self.stats[goal]['longitude']
+        self.h[goal] = 0
+
+        # Calculate the distance to the goal
+        for stat in self.stats:
+            if stat != goal:
+                self.h[stat] = round(math.sqrt((self.stats[stat]['longitude'] - goalLon) ** 2 + (self.stats[stat]['latitude'] - goalLat) ** 2), 10)
+
+# Helper for comparisons
+def get_dijkstra_path(dist, G, source, dest):
+    if dist[dest] == float('inf'):
+        return None
+    path = [dest]
+    current = dest
+    while current != source:
+        for neighbour in G.adj[current]:
+            if dist[neighbour] + G.w(neighbour, current) == dist[current]:
+                path.append(neighbour)
+                current = neighbour
+                break
+        else:
+            return None  
+    path.reverse()
+    return path
+
+
+SG = StarGraph()
+SG.loadStations('london_stations.csv', 'london_connections.csv')
+SG.createHeuristic(25)
+testA = a_star(SG, 1, 25, SG.h)
+print(testA)
+testD = dijkstra(SG, 1)
+print(get_dijkstra_path(testD,SG,1,25))
+
+import time
+import matplotlib.pyplot as plt
+import numpy as np
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
