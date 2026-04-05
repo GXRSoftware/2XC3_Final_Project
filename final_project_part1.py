@@ -464,7 +464,275 @@ print(get_dijkstra_path(testD,SG,1,25))
 import time
 import matplotlib.pyplot as plt
 import numpy as np
+from collections import defaultdict
 
+# Count the number of transfers
+def count_transfers(path, line_lookup):
+    if path is None or len(path) < 2:
+        return 0
+    transfers = 0
+    current_line = line_lookup.get((path[0], path[1]), None)
+    for i in range(1, len(path) - 1):
+        next_line = line_lookup.get((path[i], path[i+1]), None)
+        if next_line != current_line:
+            transfers += 1
+            current_line = next_line
+    return transfers
+
+def build_line_lookup(edges_df):
+    line_lookup = {}
+    for row in edges_df.itertuples():
+        line_lookup[(row.station1, row.station2)] = row.line
+        line_lookup[(row.station2, row.station1)] = row.line
+    return line_lookup
+
+# Collect all data pairs
+def collect_data(SG, line_lookup):
+    stations = list(SG.adj.keys())
+    records = []
+    total = len(stations) * (len(stations) - 1)
+    done = 0
+
+    for s in stations:
+        # dijkstra once per source
+        t0 = time.perf_counter()
+        dist_d = dijkstra(SG, s)
+        dijkstra_time = time.perf_counter() - t0
+
+        for d in stations:
+            if s == d:
+                continue
+
+            # a* timed per pair
+            SG.createHeuristic(d)
+            t0 = time.perf_counter()
+            _, path_str = a_star(SG, s, d, SG.h)
+            astar_time = time.perf_counter() - t0
+
+            # reconstruct path from dist for transfer counting
+            path = get_dijkstra_path(dist_d, SG, s, d)
+            reachable = path is not None
+
+            transfers = count_transfers(path, line_lookup) if reachable else -1
+
+            # check if all edges on path share the same line
+            if path and len(path) >= 2:
+                lines_used = set()
+                for i in range(len(path) - 1):
+                    ln = line_lookup.get((path[i], path[i+1]))
+                    if ln:
+                        lines_used.add(ln)
+                same_line = len(lines_used) == 1
+            else:
+                same_line = False
+
+            records.append({
+                "source":        s,
+                "dest":          d,
+                "dijkstra_time": dijkstra_time,
+                "astar_time":    astar_time,
+                "transfers":     transfers,
+                "reachable":     reachable,
+                "same_line":     same_line,
+                "path_len":      len(path) if path else -1,
+            })
+
+            done += 1
+            if done % 1000 == 0:
+                print(f"  {done}/{total} pairs done...")
+
+    return records
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# EXPERIMENT 1 — scatter: dijkstra vs a* time, coloured by transfers
+# ═══════════════════════════════════════════════════════════════════════════════
+def experiment_1(records):
+    r         = [x for x in records if x["reachable"]]
+    d_times   = [x["dijkstra_time"] for x in r]
+    a_times   = [x["astar_time"]    for x in r]
+    transfers = [x["transfers"]     for x in r]
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    sc = ax.scatter(d_times, a_times, c=transfers, cmap="viridis", alpha=0.4, s=8)
+    lim = max(max(d_times), max(a_times))
+    ax.plot([0, lim], [0, lim], "r--", linewidth=1, label="equal time")
+    plt.colorbar(sc, ax=ax, label="Number of Transfers")
+    ax.set_xlabel("Dijkstra Time (s)")
+    ax.set_ylabel("A* Time (s)")
+    ax.set_title("Exp 1 — Dijkstra vs A* Time per Pair\n(below red line = A* faster)")
+    ax.legend()
+    plt.tight_layout()
+    plt.savefig("exp1_scatter.png", dpi=150)
+    plt.show()
+    print("Saved: exp1_scatter.png")
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# EXPERIMENT 2 — grouped bar: avg runtime by number of transfers
+# ═══════════════════════════════════════════════════════════════════════════════
+def experiment_2(records):
+    r = [x for x in records if x["reachable"]]
+    by_transfer = defaultdict(list)
+    for x in r:
+        by_transfer[x["transfers"]].append((x["dijkstra_time"], x["astar_time"]))
+
+    labels = sorted(by_transfer.keys())
+    avg_d  = [np.mean([v[0] for v in by_transfer[t]]) for t in labels]
+    avg_a  = [np.mean([v[1] for v in by_transfer[t]]) for t in labels]
+    counts = [len(by_transfer[t]) for t in labels]
+
+    x = np.arange(len(labels))
+    w = 0.35
+    fig, ax = plt.subplots(figsize=(9, 5))
+    ax.bar(x - w/2, avg_d, w, label="Dijkstra", color="steelblue")
+    ax.bar(x + w/2, avg_a, w, label="A*",       color="orange")
+    ax.set_xticks(x)
+    ax.set_xticklabels([f"{t}\n(n={c})" for t, c in zip(labels, counts)], fontsize=8)
+    ax.set_xlabel("Number of Transfers")
+    ax.set_ylabel("Average Time (s)")
+    ax.set_title("Exp 2 — Avg Runtime by Transfer Count")
+    ax.legend()
+    plt.tight_layout()
+    plt.savefig("exp2_transfers.png", dpi=150)
+    plt.show()
+    print("Saved: exp2_transfers.png")
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# EXPERIMENT 3 — box plots: same-line vs multi-line pairs
+# ═══════════════════════════════════════════════════════════════════════════════
+def experiment_3(records):
+    r = [x for x in records if x["reachable"]]
+
+    same      = [x["astar_time"] - x["dijkstra_time"] for x in r if     x["same_line"]]
+    different = [x["astar_time"] - x["dijkstra_time"] for x in r if not x["same_line"]]
+
+    fig, ax = plt.subplots(figsize=(7, 5))
+    ax.boxplot(
+        [same, different],
+        labels=[f"Same Line\n(n={len(same)})", f"Multi-Line\n(n={len(different)})"],
+        showfliers=False
+    )
+    ax.axhline(0, color="red", linestyle="--", linewidth=1, label="equal (0 = same speed)")
+    ax.set_ylabel("A* Time − Dijkstra Time (s)\n(negative = A* faster)")
+    ax.set_title("Exp 3 — A* Advantage: Same Line vs Multi-Line Pairs")
+    ax.legend()
+    plt.tight_layout()
+    plt.savefig("exp3_sameline.png", dpi=150)
+    plt.show()
+    print("Saved: exp3_sameline.png")
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# EXPERIMENT 4 — scatter + trend: A* advantage vs path length
+# ═══════════════════════════════════════════════════════════════════════════════
+def experiment_4(records):
+    r         = [x for x in records if x["reachable"]]
+    path_lens = [x["path_len"]                         for x in r]
+    diff      = [x["dijkstra_time"] - x["astar_time"]  for x in r]
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.scatter(path_lens, diff, alpha=0.3, s=8, color="steelblue")
+    ax.axhline(0, color="red", linestyle="--", linewidth=1, label="equal")
+
+    z  = np.polyfit(path_lens, diff, 1)
+    p  = np.poly1d(z)
+    xs = np.linspace(min(path_lens), max(path_lens), 200)
+    ax.plot(xs, p(xs), color="darkorange", linewidth=2, label="trend")
+
+    ax.set_xlabel("Path Length (hops)")
+    ax.set_ylabel("Dijkstra − A* Time (s)\n(positive = A* faster)")
+    ax.set_title("Exp 4 — A* Speed Advantage vs Path Length")
+    ax.legend()
+    plt.tight_layout()
+    plt.savefig("exp4_pathlength.png", dpi=150)
+    plt.show()
+    print("Saved: exp4_pathlength.png")
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# EXPERIMENT 5 — bar: average A* advantage per source station
+# ═══════════════════════════════════════════════════════════════════════════════
+def experiment_5(records):
+    r = [x for x in records if x["reachable"]]
+
+    by_source = defaultdict(list)
+    for x in r:
+        by_source[x["source"]].append(x["dijkstra_time"] - x["astar_time"])
+
+    stations      = sorted(by_source.keys())
+    avg_advantage = [np.mean(by_source[s]) for s in stations]
+    colors        = ["green" if v > 0 else "red" for v in avg_advantage]
+
+    fig, ax = plt.subplots(figsize=(14, 4))
+    ax.bar(range(len(stations)), avg_advantage, color=colors, alpha=0.7)
+    ax.axhline(0, color="black", linewidth=0.8)
+    ax.set_xticks(range(len(stations)))
+    ax.set_xticklabels(stations, rotation=90, fontsize=6)
+    ax.set_xlabel("Source Station ID")
+    ax.set_ylabel("Avg (Dijkstra − A*) Time (s)\n(green = A* faster on average)")
+    ax.set_title("Exp 5 — Average A* Advantage by Source Station")
+    plt.tight_layout()
+    plt.savefig("exp5_bysource.png", dpi=150)
+    plt.show()
+    print("Saved: exp5_bysource.png")
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# EXPERIMENT 6 — are costs actually equal between dijkstra and a*?
+# ═══════════════════════════════════════════════════════════════════════════════
+def experiment_6(records, dist_cache, SG):
+    """Sanity check: compare path costs found by each algorithm"""
+    r = [x for x in records if x["reachable"]]
+
+    mismatches = 0
+    cost_diffs = []
+
+    for x in r:
+        s, d    = x["source"], x["dest"]
+        d_cost  = dist_cache[(s, d)]
+
+        SG.createHeuristic(d)
+        _, path_str = a_star(SG, s, d, SG.h)
+        if path_str:
+            nodes     = [int(n) for n in path_str.split(" -> ")]
+            a_cost    = sum(SG.w(nodes[i], nodes[i+1]) for i in range(len(nodes) - 1))
+            diff      = abs(a_cost - d_cost)
+            cost_diffs.append(diff)
+            if diff > 1e-9:
+                mismatches += 1
+
+    fig, ax = plt.subplots(figsize=(7, 4))
+    ax.hist(cost_diffs, bins=30, color="steelblue", edgecolor="black")
+    ax.set_xlabel("|A* cost − Dijkstra cost|")
+    ax.set_ylabel("Number of Pairs")
+    ax.set_title(f"Exp 6 — Cost Agreement Between A* and Dijkstra\n({mismatches} mismatches out of {len(cost_diffs)} pairs)")
+    plt.tight_layout()
+    plt.savefig("exp6_costcheck.png", dpi=150)
+    plt.show()
+    print(f"Saved: exp6_costcheck.png  |  Mismatches: {mismatches}")
+
+# ── run everything ─────────────────────────────────────────────────────────────
+edges_df    = pd.read_csv('london_connections.csv')
+line_lookup = build_line_lookup(edges_df)
+
+print("Collecting all-pairs data...")
+records = collect_data(SG, line_lookup)
+
+reachable_count   = sum(1 for r in records if r["reachable"])
+unreachable_count = sum(1 for r in records if not r["reachable"])
+print(f"\nTotal pairs: {len(records)} | Reachable: {reachable_count} | Unreachable: {unreachable_count}\n")
+
+# cache dijkstra costs for experiment 6
+print("Caching Dijkstra costs for exp 6...")
+dist_cache = {}
+for s in list(SG.adj.keys()):
+    dist_d = dijkstra(SG, s)
+    for d in SG.adj.keys():
+        if s != d:
+            dist_cache[(s, d)] = dist_d[d]
+
+experiment_1(records)
+experiment_2(records)
+experiment_3(records)
+experiment_4(records)
+experiment_5(records)
+experiment_6(records, dist_cache, SG)
 
 
 
