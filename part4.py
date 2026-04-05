@@ -24,7 +24,7 @@ class Graph:
         """
         Adds the edge (w, end) to the node 'start'
         """
-        if start not in self.graph or end not in self.grpah:
+        if start not in self.graph or end not in self.graph:
             # raise an exception if start/end is not in the graph
             raise Exception("The start/end node is not in the graph")
 
@@ -42,12 +42,14 @@ class Graph:
         return total_num_of_nodes
 
     def w(node):
+        #TODO
         pass
 
 
 class WeightedGraph(Graph):
 
     def w(nod1, node2):
+        #TODO
         pass
 
 
