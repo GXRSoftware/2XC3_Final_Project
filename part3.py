@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from collections import defaultdict
-from final_project_part1 import DirectedWeightedGraph, dijkstra, create_random_complete_graph
-from Week2 import a_star
+from part1 import DirectedWeightedGraph, dijkstra, create_random_complete_graph
+from part2 import a_star
 ######################
 
 ###### Controls ######

@@ -1,6 +1,7 @@
 
 from abc import (ABC, abstractmethod)
-from final_project_part1 import (dijkstra, bellman_ford, a_star)
+from part1 import (dijkstra, bellman_ford)
+from part2 import a_star
 
 
 class Graph:

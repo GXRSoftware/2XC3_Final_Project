@@ -5,7 +5,7 @@
 ###### Imports  ######
 import min_heap
 import random
-from final_project_part1 import DirectedWeightedGraph, dijkstra, create_random_complete_graph
+from part1 import DirectedWeightedGraph, dijkstra, create_random_complete_graph
 ######################
 
 ###### Controls ######
