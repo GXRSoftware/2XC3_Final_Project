@@ -92,7 +92,7 @@ class Bellman_Ford(SPAlgorithm):
         return distances[dest]
 
 
-class A_Start(SPAlgorithm):
+class A_Star(SPAlgorithm):
 
     def calc_sp(self, graph, source, dest):
         h = graph.get_heuristic()
