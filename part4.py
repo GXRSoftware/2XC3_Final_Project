@@ -8,6 +8,7 @@ class Graph:
 
     def __init__(self):
         self.graph = {} # represent the graph using adjacency list
+        self.adj = self.graph # we do this here because calling code might call self.adj instead of self.graph
 
     def get_adj_nodes(self, node):
         """
@@ -21,15 +22,18 @@ class Graph:
         """
         self.graph[node] = []
 
-    def add_edge(self, start, end, w):
+    def add_edge(self, start, end, w=0):
         """
-        Adds the edge (w, end) to the node 'start'
+        Adds the edge from 'start' to 'end'
+
+        Note that since this is an unweighted graph, NO
+        weight should be passed to this method
         """
         if start not in self.graph or end not in self.graph:
             # raise an exception if start/end is not in the graph
             raise Exception("The start/end node is not in the graph")
 
-        self.graph[start].append((w, end))
+        self.graph[start].append(end)
 
     def get_num_of_nodes(self):
         """
@@ -37,26 +41,58 @@ class Graph:
         """
         total_num_of_nodes = 0
 
-        for node in graph:
+        for node in self.graph:
             total_num_of_nodes += 1
 
         return total_num_of_nodes
 
-    def w(node):
-        #TODO
-        pass
+    def number_of_nodes(self):
+        """
+        A wrapper around self.get_num_of_nodes
+
+        Exists so that if calling code expects a graph mathod simillar to part1.py
+        we have this method
+        """
+        return self.get_num_of_nodes()
+
+
+    def w(self, node):
+        """
+        Gets the weight of an edge
+        """
+        # we raise an exception here because this graph has no weights
+        raise Exception("This graph has no weigths")
 
 
 class WeightedGraph(Graph):
 
-    def w(nod1, node2):
-        #TODO
-        pass
+    def __init__(self):
+        super().__init__()
+        self.weights = {}
+
+    def add_edge(self, start, end, w):
+        """
+        Adds the edge from 'start' to 'end' and stores its wieght in self.weights
+        """
+        super().add_edge(start, end)
+        self.weights[(start, end)] = w
+
+    def w(self, node1, node2):
+        """
+        Gets the weight of the edge (node1, node2)
+        """
+        if node1 not in self.graph:
+            raise Exception(f"{node1} is not in the graph")
+        if node2 not in self.graph:
+            raise Exception(f"{node2} is not in the graph")
+
+        return self.weights[(node1, node2)]
 
 
 class HeuristicGraph(WeightedGraph):
 
     def __init__(self, heuristic):
+        super().__init__()
         self._heuristic = heuristic
 
     def get_heuristic(self):
