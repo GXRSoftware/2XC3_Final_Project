@@ -450,7 +450,7 @@ if final1e3:
     plt.savefig("Djikstra Approx distance vs Actual Distance on Sparse.png")
     plt.clf()
 
-    plt.plot(values, djikstra_approx_dist.values(), color="red",   label="Dijkstra Approx")
+    plt.plot(values, djikstra_approx_dist.values(), color="red", label="Dijkstra Approx")
     plt.axhline(y=djikstra_total_dense, color="black", label="Dijkstra")
     plt.title("Djikstra Approximate Distance vs Djikstra's Distance on Dense")
     plt.xlabel("k Value")
@@ -459,7 +459,7 @@ if final1e3:
     plt.savefig("Djikstra Approx distance vs Actual Distance on Dense.png")
     plt.clf()
 
-    plt.plot(values, bellman_approx_dist_sparse.values(), color="red",   label="Bellman Approx")
+    plt.plot(values, bellman_approx_dist_sparse.values(), color="red",label="Bellman Approx")
     plt.axhline(y=bellman_total_sparse,color="black", label="Bellman-Ford")
     plt.title("Bellman Approximate Distance vs Bellman's Distance on Sparse")
     plt.xlabel("k Value")
@@ -468,8 +468,8 @@ if final1e3:
     plt.savefig("Bellman Approx distance vs Actual Distance on Sparse.png")
     plt.clf()
 
-    plt.plot(values, bellman_approx_dist.values(), color="red",   label="Bellman Approx")
-    plt.axhline(y=bellman_total_dense, color="black", label="Bellman-Ford")
+    plt.plot(values, bellman_approx_dist.values(), color="red",label="Bellman Approx")
+    plt.axhline(y=bellman_total_dense, color="black",label="Bellman-Ford")
     plt.title("Bellman Approximate Distance vs Bellman's Distance on Dense")
     plt.xlabel("k Value")
     plt.ylabel("Total Distance")
@@ -477,8 +477,8 @@ if final1e3:
     plt.savefig("Bellman Approx distance vs Actual Distance on Dense.png")
     plt.clf()
 
-    plt.plot(values, dijkstra_approx_time_sparse.values(), color="red",  label="Sparse")
-    plt.plot(values, dijkstra_approx_time_dense.values(),  color="blue", label="Dense")
+    plt.plot(values, dijkstra_approx_time_sparse.values(),color="red", label="Sparse")
+    plt.plot(values, dijkstra_approx_time_dense.values(),color="black",label="Dense")
     plt.title("Dijkstra Approx Execution Time — Sparse vs Dense")
     plt.xlabel("k Value")
     plt.ylabel("Average Time (Seconds)")
@@ -486,8 +486,8 @@ if final1e3:
     plt.savefig("Dijkstra Time Sparse vs Dense.png")
     plt.clf()
 
-    plt.plot(values, bellman_approx_time_sparse.values(), color="red",  label="Sparse")
-    plt.plot(values, bellman_approx_time_dense.values(),  color="black", label="Dense")
+    plt.plot(values, bellman_approx_time_sparse.values(), color="red",label="Sparse")
+    plt.plot(values, bellman_approx_time_dense.values(),color="black",label="Dense")
     plt.title("Bellman-Ford Approx Execution Time, Sparse vs Dense")
     plt.xlabel("k Value")
     plt.ylabel("Average Time (Seconds)")
