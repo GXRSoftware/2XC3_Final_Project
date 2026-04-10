@@ -2,9 +2,8 @@ import min_heap
 import random
 import time
 import matplotlib.pyplot as plt
-import math
 
-final1e1 = False
+final1e1 = True
 final1e2 = False
 final1e3 = False
 finalmystery = False
@@ -275,7 +274,7 @@ if final1e1:
     plt.plot(values, bellman_approx_dist.values(), color="black", label="Bellman-Ford Approx")
     plt.title("Average Distance vs k Value")
     plt.xlabel("k Value")
-    plt.ylabel("Total Reachable Distance")
+    plt.ylabel("Total Distance")
     plt.legend()
     plt.savefig("Distance_Comparison.png")
     plt.clf() 
