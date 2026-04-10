@@ -5,9 +5,10 @@ import matplotlib.pyplot as plt
 import math
 
 final1e1 = False
-final1e2 = True
+final1e2 = False
 final1e3 = False
 finalmystery = False
+printmys = False
 
 class DirectedWeightedGraph:
 
@@ -496,4 +497,54 @@ if final1e3:
 
 
 
+if printmys:
+    # Negative 
+
+    g1 = DirectedWeightedGraph()
+    for i in range(4):
+        g1.add_node(i)
+
+    g1.add_edge(0, 1, 3)
+    g1.add_edge(1,2, -8)
+    g1.add_edge(2,3,9)
+    g1.add_edge(0,3,10)
+    g1.add_edge(3,0,3)
+
+    #Normal
+
+    g2 = DirectedWeightedGraph()
+    for i in range(4):
+        g2.add_node(i)
+
+    g2.add_edge(0, 1,-4)
+    g2.add_edge(1,2, 2)
+    g2.add_edge(2,3,1)
+    g2.add_edge(0,3,3)
+    g2.add_edge(3,0,2)
+
+    print(mystery(g1))
+    print(mystery(g2))
+
+
+if finalmystery:
+    node_sizes = [2**i for i in range(9)]
+    amount_time = []
+
+    for i in node_sizes:
+        print(i)
+        g = create_random_complete_graph(i, 10)
+        start_time = time.time()
+        mystery(g)
+        end_time = time.time()
+        amount_time.append(end_time - start_time)
+
+    for i in range(len(node_sizes)):
+        print(f"Size: {node_sizes[i]}, Exec Time: {amount_time[i]}")
+
+    plt.loglog(node_sizes, amount_time)
+    plt.xlabel("Node Sizes")
+    plt.ylabel("Execution Time")
+    plt.title("Log-Log Plot")
+    plt.savefig("Log-Plot.png")
+    plt.clf()
 
